@@ -238,13 +238,7 @@ def generate_pdf():
     items_1=session['my_list']
     output_path='output.pdf'
     convert_list_to_pdf_with_template(items_1,output_path)
-    return "pdf generated successfully"
-
-@app.route('/generate_pdf_endpoint', methods=['POST'])
-def generate_pdf_endpoint():
-    questions = session.get('questions')
-    result = generate_pdf(questions)
-    return result
+    return redirect('/my_pdf_documents')
 
 def fetch_pdf_documents_for_user(username):
     user = users_collection.find_one({'username': username})  # Retrieve the user document from MongoDB
