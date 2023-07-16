@@ -1,6 +1,6 @@
-from flask import render_template, url_for, flash, redirect, request,session
-from questionpapergenerator import app, users_collection
 from PyPDF2 import PdfReader
+from flask import render_template, url_for, flash, redirect, request,session,send_file
+from questionpapergenerator import app, users_collection , pdf_collection
 import re
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, T5ForConditionalGeneration, T5TokenizerFast
 from reportlab.lib.pagesizes import letter
@@ -100,6 +100,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import Paragraph
+from io import BytesIO
 
 def convert_list_to_pdf_with_template(data_list, output_file):
     # Create the PDF canvas
@@ -140,6 +141,25 @@ def convert_list_to_pdf_with_template(data_list, output_file):
     # Save the canvas as the final PDF
     c.save()
 
+    # Save the PDF file into MongoDB
+    with open(output_file, 'rb') as pdf_file:
+        pdf_data = pdf_file.read()
+
+    username = session.get('username')  # Get the username from session or any relevant source
+
+    user = users_collection.find_one({'username': username})  # Retrieve the user document from MongoDB
+
+    if user:
+        user_id = user['_id']  # Assuming the user ID is stored in the '_id' field
+        pdf_document = {
+            "user_id": user_id,
+            "pdf_file": pdf_data
+        }
+
+        pdf_collection.insert_one(pdf_document)
+        print("PDF saved to MongoDB successfully.")
+    else:
+        print("User not found. PDF not saved.")
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -215,7 +235,6 @@ def upload():
 
 @app.route('/generate_pdf', methods=['GET'])
 def generate_pdf():
-    items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
     items_1=session['my_list']
     output_path='output.pdf'
     convert_list_to_pdf_with_template(items_1,output_path)
@@ -226,3 +245,36 @@ def generate_pdf_endpoint():
     questions = session.get('questions')
     result = generate_pdf(questions)
     return result
+
+def fetch_pdf_documents_for_user(username):
+    user = users_collection.find_one({'username': username})  # Retrieve the user document from MongoDB
+    if user:
+        user_id = user['_id']  # Assuming the user ID is stored in the '_id' field
+        pdf_documents = pdf_collection.find({'user_id': user_id})  # Fetch all PDF documents for the user
+
+        return pdf_documents
+    else:
+        return None
+import io
+
+from bson import ObjectId
+
+@app.route('/view_pdf/<pdf_id>')
+def view_pdf(pdf_id):
+    pdf_doc = pdf_collection.find_one({'_id': ObjectId(pdf_id)})
+
+    if pdf_doc:
+        pdf_file = pdf_doc['pdf_file']
+        pdf_buffer = io.BytesIO(pdf_file)
+        return send_file(pdf_buffer,mimetype='application/pdf')
+
+    return "PDF not found"
+
+@app.route('/my_pdf_documents')
+def my_pdf_documents():
+    username = session.get('username')  # Get the username from session or any relevant source
+    if username:
+        pdf_documents = fetch_pdf_documents_for_user(username)
+        return render_template('my_pdf_documents.html', pdf_documents=pdf_documents)
+
+    return "User not logged in"
