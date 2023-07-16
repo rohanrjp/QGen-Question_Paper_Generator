@@ -17,18 +17,6 @@ def extract_text_from_pdf(file_path):
         text += page.extract_text()
     return text
 
-'''def preprocess_text(text):
-    # Remove leading and trailing whitespace
-    text = text.strip()
-    # Replace newlines and multiple whitespaces with a single space
-    text = ' '.join(text.split())
-    # Split the text into paragraphs
-    paragraphs = text.split('\n')
-    # Combine paragraphs into a single paragraph
-    single_paragraph = ' '.join(paragraphs)
-    return single_paragraph
-'''
-
 def preprocess_text(text):
     # Remove leading and trailing whitespace
     text = text.strip()
@@ -141,31 +129,6 @@ def register():
 def user_dashboard():
     return render_template('dashboard.html')
 
-
-""""
-@app.route("/upload")
-def upload():
-    return render_template('upload.html')
-"""
-
-'''
-@app.route('/', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        file = request.files['file']
-        if file:
-            # Save the uploaded file
-            file_path = '/' + file.filename
-            file.save(file_path)
-            # Perform text extraction
-            extracted_text = extract_text_from_pdf(file_path)
-            # Render the extracted text
-            preprocessed_text = preprocess_text(extracted_text)
-            print(preprocessed_text)
-            questions= hf_run_model(preprocessed_text)
-            return render_template('result.html', text1 = extracted_text, text2=preprocessed_text, text3=questions)
-    return render_template('upload.html')
-    '''
 import os
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -177,37 +140,31 @@ def upload():
             temp_dir = '/tmp'
             file_path = os.path.join(temp_dir, file.filename)
             file.save(file_path)
-            
             # Perform text extraction
             extracted_text = extract_text_from_pdf(file_path)
-            
             # Delete the temporary file
             os.remove(file_path)
-            
             # Continue with text processing
             preprocessed_text = preprocess_text(extracted_text)
             print(preprocessed_text)
             questions = hf_run_model(preprocessed_text,num_return_sequences=8, num_questions=5)
-            session['questions'] = questions
+            session['my_list'] = questions
+
             for count,ele in enumerate(questions):
                 print(count+1)
                 print(ele)
+            print(type(questions))
             return render_template('upload.html', text1=extracted_text, text2=preprocessed_text, text3=questions)
-        else:
-            session['questions'] = [] 
-        return redirect(url_for('generate_pdf'))
+
     return render_template('upload.html')
 
 @app.route('/generate_pdf', methods=['GET'])
 def generate_pdf():
-    questions = session.get('questions')
+    items = ['Item 1', 'Item 2', 'Item 3', 'Item 4', 'Item 5']
+    items_1=session['my_list']
     output_path='output.pdf'
-    if questions:
-        result = convert_list_to_pdf_with_template(questions,output_path)
-        return result
-    return "No questions found"
-
-
+    convert_list_to_pdf_with_template(items_1,output_path)
+    return "pdf generated successfully"
 
 @app.route('/generate_pdf_endpoint', methods=['POST'])
 def generate_pdf_endpoint():

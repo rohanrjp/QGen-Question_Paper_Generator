@@ -19,3 +19,11 @@ def hf_run_model(input_string, num_return_sequences=8, generator_args=None):
     output = output[0].split("<sep>")
     output = [question.strip() for question in output[0].split("?") if question.strip()]
     return output
+------------------------------------------------ - - - -------------------------------------------------------------------------------------------------------------------------
+<div class="mt-3">
+                            <form method="POST" enctype="multipart/form-data">
+                                <div class="mt-3">
+                                    <button class="btn btn-primary" onclick="window.location.href='/generate_pdf'">Generate pdf</button>
+                                </div>
+                            </form>
+                        </div>
