@@ -1,0 +1,21 @@
+checkpoint = "t5-base"
+tokenizer = T5TokenizerFast.from_pretrained(checkpoint)
+
+model = AutoModelForSeq2SeqLM.from_pretrained("ThomasSimonini/t5-end2end-question-generation")
+
+def hf_run_model(input_string, num_return_sequences=8, generator_args=None):
+    if generator_args is None:
+        generator_args = {
+            "max_length": 256,
+            "num_beams": 10,
+            "length_penalty": 1.5,
+            "no_repeat_ngram_size": 3,
+            "early_stopping": True,
+        }
+    input_string = "generate questions: " + input_string + " </s>"
+    input_ids = tokenizer.encode(input_string, return_tensors="pt")
+    res = model.generate(input_ids, **generator_args, num_return_sequences=num_return_sequences)
+    output = tokenizer.batch_decode(res, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+    output = output[0].split("<sep>")
+    output = [question.strip() for question in output[0].split("?") if question.strip()]
+    return output
