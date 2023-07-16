@@ -1,14 +1,12 @@
 from flask import render_template, url_for, flash, redirect, request,session
-from questionpapergenerator import app, db
+from questionpapergenerator import app, users_collection
 from PyPDF2 import PdfReader
 import re
-import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, T5ForConditionalGeneration, T5TokenizerFast
-from flask_login import login_user, current_user, logout_user, login_required
-from questionpapergenerator.forms import RegistrationForm, LoginForm
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+
 
 def extract_text_from_pdf(file_path):
     reader = PdfReader(file_path)
@@ -76,6 +74,7 @@ def hf_run_model(input_string, num_return_sequences=8, num_questions=5, max_sequ
     
     return list(unique_questions)
 
+'''
 def convert_list_to_pdf_with_template(data_list, output_file):
     # Create the PDF canvas
     c = canvas.Canvas(output_file, pagesize=letter)
@@ -95,36 +94,92 @@ def convert_list_to_pdf_with_template(data_list, output_file):
 
     # Save the canvas as the final PDF
     c.save()
-
-
-
 '''
-@app.route("/login")
-def login():
-        form=LoginForm()
-        return render_template('login.html',form=form)
-'''
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import Paragraph
 
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        if form.email.data == 'admin@blog.com' and form.password.data == 'password':
-            flash('You have been logged in!', 'success')
-            return redirect(url_for('home'))
-        else:
-            flash('Login Unsuccessful. Please check username and password', 'danger')
-    return render_template('login.html', title='Login', form=form)
+def convert_list_to_pdf_with_template(data_list, output_file):
+    # Create the PDF canvas
+    c = canvas.Canvas(output_file, pagesize=letter)
 
-@app.route("/register", methods=['GET', 'POST'])
+    # Set the font and size
+    c.setFont("Helvetica", 12)
+
+    # Add the template or background image
+    template_path = 'template.png'
+    c.drawImage(template_path, 0, 0, width=letter[0], height=letter[1])
+
+    # Set up paragraph styles
+    styles = getSampleStyleSheet()
+    paragraph_style = ParagraphStyle(
+        'normal',
+        parent=styles['Normal'],
+        textColor=colors.black,
+        fontSize=12,
+        leading=16  # Adjust the leading for more spacing between lines
+    )
+
+    # Write the list elements to the PDF
+    y = 550  # Starting y position
+    for item in data_list:
+        text = str(item)
+        p = Paragraph(text, style=paragraph_style)
+        p.wrapOn(c, 400, 0)
+
+        # Check if there's enough space on the page for the paragraph
+        if y - p.height < 50:
+            c.showPage()  # Start a new page
+            y = 750  # Reset the y position to the top of the new page
+
+        p.drawOn(c, 100, y)
+        y -= p.height + 20  # Adjust the spacing between paragraphs
+
+    # Save the canvas as the final PDF
+    c.save()
+
+
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        flash(f'Account created for {form.username.data}!', 'success')
-        return redirect(url_for('home'))
-    return render_template('register.html', title='Register', form=form)
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        existing_user = users_collection.find_one({'username': username})
 
-@app.route("/")
+        if existing_user:
+            return "Username already exists!"
+
+        user = {'username': username, 'password': password}
+        users_collection.insert_one(user)
+        session['username'] = username
+        return redirect('/')
+    else:
+        return render_template('register.html')
+
+@app.route('/')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        existing_user = users_collection.find_one({'username': username, 'password': password})
+
+        if existing_user:
+            session['username'] = username
+            return redirect('/userdashboard')
+        else:
+            return "Invalid username or password!"
+    else:
+        return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect('/')
+
 @app.route("/userdashboard")
 def user_dashboard():
     return render_template('dashboard.html')
