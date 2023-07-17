@@ -30,3 +30,12 @@ def hf_run_model(input_string, num_return_sequences=8, generator_args=None):
 
 
 ThomasSimonini/t5-end2end-question-generation                        
+
+
+
+rohna is amazing i am good
+['1700','1700','17700','188']=segments
+
+['what','wht is rohna']
+['what,'['what','is','rohan']]
+segments[0:3:1]

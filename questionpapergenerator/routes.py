@@ -8,7 +8,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 import torch,random
 
-
+# model_1=AutoModelForSeq2SeqLM.from_pretrained("rohan-jp1/t5-end2end-question-generation")
 
 def extract_text_from_pdf(file_path):
     reader = PdfReader(file_path)
@@ -31,8 +31,6 @@ def preprocess_text(text, segment_length=1700):
     segments = [text[i:i+segment_length] for i in range(0, len(text), segment_length)]
 
     return segments
-
-
 
 
 checkpoint = "t5-base"
@@ -58,6 +56,7 @@ def hf_run_model(input_list, num_return_sequences=8, num_questions=2, max_sequen
     generated_questions = []
     unique_questions = set()
 
+    #creating tensors of each input
     for input_string in input_list:
         input_string = "generate questions: " + input_string + " </s>"
         input_ids = tokenizer.encode(input_string, truncation=True, max_length=max_sequence_length, return_tensors="pt")
@@ -86,32 +85,6 @@ def hf_run_model(input_list, num_return_sequences=8, num_questions=2, max_sequen
     return list(unique_questions)
 
 
-
-
-
-
-
-'''
-def convert_list_to_pdf_with_template(data_list, output_file):
-    # Create the PDF canvas
-    c = canvas.Canvas(output_file, pagesize=letter)
-
-    # Set the font and size
-    c.setFont("Helvetica", 12)
-
-    # Add the template or background image
-    template_path = 'template.png'
-    c.drawImage(template_path, 0, 0, width=letter[0], height=letter[1])
-
-    # Write the list elements to the PDF
-    y = 550  # Starting y position
-    for item in data_list:
-        c.drawString(100, y, str(item))
-        y -= 50
-
-    # Save the canvas as the final PDF
-    c.save()
-'''
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
@@ -224,12 +197,14 @@ def logout():
 
 @app.route("/userdashboard")
 def user_dashboard():
-    return render_template('dashboard.html')
+    username = session.get('username')
+    return render_template('dashboard.html',username=username)
 
 import os
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
+    
     if request.method == 'POST':
         file = request.files['file']
         if file:
@@ -271,8 +246,9 @@ def fetch_pdf_documents_for_user(username):
         return pdf_documents
     else:
         return None
-import io
 
+
+import io
 from bson import ObjectId
 
 @app.route('/view_pdf/<pdf_id>')
@@ -288,7 +264,7 @@ def view_pdf(pdf_id):
 
 @app.route('/my_pdf_documents')
 def my_pdf_documents():
-    username = session.get('username')  # Get the username from session or any relevant source
+    username = session['username']  # Get the username from session or any relevant source
     if username:
         pdf_documents = fetch_pdf_documents_for_user(username)
         return render_template('my_pdf_documents.html', pdf_documents=pdf_documents)
