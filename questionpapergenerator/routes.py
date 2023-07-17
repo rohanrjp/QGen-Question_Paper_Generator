@@ -6,6 +6,8 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, T5ForConditionalG
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
+import torch,random
+
 
 
 def extract_text_from_pdf(file_path):
@@ -15,7 +17,7 @@ def extract_text_from_pdf(file_path):
         text += page.extract_text()
     return text
 
-def preprocess_text(text):
+def preprocess_text(text, segment_length=1700):
     # Remove leading and trailing whitespace
     text = text.strip()
 
@@ -25,13 +27,12 @@ def preprocess_text(text):
     # Replace newlines and multiple whitespaces with a single space
     text = ' '.join(text.split())
 
-    # Split the text into paragraphs
-    paragraphs = text.split('\n')
+    # Split the text into segments of specified length
+    segments = [text[i:i+segment_length] for i in range(0, len(text), segment_length)]
 
-    # Combine paragraphs into a single paragraph
-    single_paragraph = ' '.join(paragraphs)
+    return segments
 
-    return single_paragraph
+
 
 
 checkpoint = "t5-base"
@@ -41,7 +42,7 @@ model = AutoModelForSeq2SeqLM.from_pretrained("ThomasSimonini/t5-end2end-questio
 
 import random
 
-def hf_run_model(input_string, num_return_sequences=8, num_questions=5, max_sequence_length=512, generator_args=None):
+def hf_run_model(input_list, num_return_sequences=8, num_questions=2, max_sequence_length=512, generator_args=None):
     if generator_args is None:
         generator_args = {
             "max_length": max_sequence_length,
@@ -49,30 +50,46 @@ def hf_run_model(input_string, num_return_sequences=8, num_questions=5, max_sequ
             "length_penalty": 1.5,
             "no_repeat_ngram_size": 6,
             "early_stopping": True,
+            "temperature": 0.8,  # Adjust the temperature value (higher values for more randomness)
+            "top_k": 50,  # Adjust the top_k value (higher values for more diverse output)
+            "top_p": 0.95  # Adjust the top_p value (lower values for more focused output)
         }
-    input_string = "generate questions: " + input_string + " </s>"
-    input_ids = tokenizer.encode(input_string, truncation=True, max_length=max_sequence_length, return_tensors="pt")
-
+    
     generated_questions = []
     unique_questions = set()
-    
-    # Generate questions using the model
-    res = model.generate(input_ids, **generator_args, num_return_sequences=num_return_sequences)
-    output = tokenizer.batch_decode(res, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-    
-    for sequence in output:
-        sequence = sequence.split("<sep>")
-        questions = [question.strip() for question in sequence[0].split("?") if question.strip()]
-        generated_questions.extend(questions)
-    
+
+    for input_string in input_list:
+        input_string = "generate questions: " + input_string + " </s>"
+        input_ids = tokenizer.encode(input_string, truncation=True, max_length=max_sequence_length, return_tensors="pt")
+
+        # Generate questions using the model
+        res = model.generate(input_ids, **generator_args, num_return_sequences=num_return_sequences)
+        output = tokenizer.batch_decode(res, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+
+        segment_questions = []
+        for sequence in output:
+            sequence = sequence.split("<sep>")
+            questions = [question.strip() + "?" for question in sequence[0].split("?") if question.strip()]
+            segment_questions.extend(questions[:num_questions])  # Selecting the desired number of questions from each segment
+
+        # Filter out single-word questions for each segment
+        segment_questions = [question for question in segment_questions if len(question.split()) > 1]
+        generated_questions.extend(segment_questions)
+
     # Randomly sample questions until reaching the desired number of non-repeated questions
-    while len(unique_questions) < num_questions and generated_questions:
+    while len(unique_questions) < num_questions * len(input_list):  # Generating questions from each segment
         question = random.choice(generated_questions)
         generated_questions.remove(question)
         if question not in unique_questions:
             unique_questions.add(question)
-    
+
     return list(unique_questions)
+
+
+
+
+
+
 
 '''
 def convert_list_to_pdf_with_template(data_list, output_file):
@@ -125,7 +142,9 @@ def convert_list_to_pdf_with_template(data_list, output_file):
 
     # Write the list elements to the PDF
     y = 550  # Starting y position
-    index=1
+    index = 1
+    spacing = 20  # Fixed spacing between paragraphs
+
     for item in data_list:
         text = f"{index}) {item}"
         p = Paragraph(text, style=paragraph_style)
@@ -136,9 +155,10 @@ def convert_list_to_pdf_with_template(data_list, output_file):
             c.showPage()  # Start a new page
             y = 750  # Reset the y position to the top of the new page
 
-        p.drawOn(c, 100, y)
-        y -= p.height + 20  # Adjust the spacing between paragraphs
-        index+=1
+        p.drawOn(c, 100, y-p.height)
+        y -= p.height + spacing  # Adjust the spacing between paragraphs
+        index += 1
+
     # Save the canvas as the final PDF
     c.save()
 
@@ -161,6 +181,7 @@ def convert_list_to_pdf_with_template(data_list, output_file):
         print("PDF saved to MongoDB successfully.")
     else:
         print("User not found. PDF not saved.")
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -221,9 +242,9 @@ def upload():
             # Delete the temporary file
             os.remove(file_path)
             # Continue with text processing
-            preprocessed_text = preprocess_text(extracted_text)
-            print(preprocessed_text)
-            questions = hf_run_model(preprocessed_text,num_return_sequences=8, num_questions=5)
+            preprocessed_text = preprocess_text(extracted_text,segment_length=1700)
+            print(len(preprocessed_text))
+            questions = hf_run_model(preprocessed_text,num_return_sequences=8, num_questions=2)
             session['my_list'] = questions
 
             for count,ele in enumerate(questions):
