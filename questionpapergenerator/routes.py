@@ -125,8 +125,9 @@ def convert_list_to_pdf_with_template(data_list, output_file):
 
     # Write the list elements to the PDF
     y = 550  # Starting y position
+    index=1
     for item in data_list:
-        text = str(item)
+        text = f"{index}) {item}"
         p = Paragraph(text, style=paragraph_style)
         p.wrapOn(c, 400, 0)
 
@@ -137,7 +138,7 @@ def convert_list_to_pdf_with_template(data_list, output_file):
 
         p.drawOn(c, 100, y)
         y -= p.height + 20  # Adjust the spacing between paragraphs
-
+        index+=1
     # Save the canvas as the final PDF
     c.save()
 
