@@ -85,6 +85,8 @@ def hf_run_model(input_list, num_return_sequences=8, num_questions=2, max_sequen
     return list(unique_questions)
 
 
+import datetime
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
@@ -145,8 +147,14 @@ def convert_list_to_pdf_with_template(data_list, output_file):
 
     if user:
         user_id = user['_id']  # Assuming the user ID is stored in the '_id' field
+        timestamp = datetime.datetime.now()  # Generate a timestamp
+
+        file_name = session.get('file_name')
+
         pdf_document = {
             "user_id": user_id,
+            "timestamp": timestamp,
+            "file_name": file_name,
             "pdf_file": pdf_data
         }
 
@@ -154,6 +162,7 @@ def convert_list_to_pdf_with_template(data_list, output_file):
         print("PDF saved to MongoDB successfully.")
     else:
         print("User not found. PDF not saved.")
+
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -201,10 +210,8 @@ def user_dashboard():
     return render_template('dashboard.html',username=username)
 
 import os
-
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
-    
     if request.method == 'POST':
         file = request.files['file']
         if file:
@@ -212,23 +219,28 @@ def upload():
             temp_dir = '/tmp'
             file_path = os.path.join(temp_dir, file.filename)
             file.save(file_path)
+            session['file_name'] = file.filename
             # Perform text extraction
             extracted_text = extract_text_from_pdf(file_path)
             # Delete the temporary file
             os.remove(file_path)
             # Continue with text processing
-            preprocessed_text = preprocess_text(extracted_text,segment_length=1700)
+            preprocessed_text = preprocess_text(extracted_text, segment_length=1700)
             print(len(preprocessed_text))
-            questions = hf_run_model(preprocessed_text,num_return_sequences=8, num_questions=2)
+            questions = hf_run_model(preprocessed_text, num_return_sequences=8, num_questions=2)
             session['my_list'] = questions
 
-            for count,ele in enumerate(questions):
-                print(count+1)
+            for count, ele in enumerate(questions):
+                print(count + 1)
                 print(ele)
             print(type(questions))
-            return render_template('upload.html', text1=extracted_text, text2=preprocessed_text, text3=questions)
+            return render_template('upload.html', file_name=file.filename, text1=extracted_text,
+                                   text2=preprocessed_text, text3=questions)
 
     return render_template('upload.html')
+
+
+
 
 @app.route('/generate_pdf', methods=['GET'])
 def generate_pdf():
@@ -270,3 +282,9 @@ def my_pdf_documents():
         return render_template('my_pdf_documents.html', pdf_documents=pdf_documents)
 
     return "User not logged in"
+
+@app.route('/remove_pdf/<pdf_id>', methods=['POST'])
+def remove_pdf(pdf_id):
+    # Remove the PDF file from the database
+    pdf_collection.delete_one({'_id': ObjectId(pdf_id)})
+    return redirect(url_for('my_pdf_documents'))
