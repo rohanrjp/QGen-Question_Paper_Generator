@@ -29,7 +29,11 @@ def hf_run_model(input_string, num_return_sequences=8, generator_args=None):
                         </div>
 
 
-ThomasSimonini/t5-end2end-question-generation                        
+ThomasSimonini/t5-end2end-question-generation    
+
+rohan-jp1/t5-end2end-questions-generation
+10 questions=2 min
+50 question=20 min
 
 
 
@@ -39,3 +43,157 @@ rohna is amazing i am good
 ['what','wht is rohna']
 ['what,'['what','is','rohan']]
 segments[0:3:1]
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My PDF Documents</title>
+    <!-- Add Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+
+
+
+   <style>
+        body {
+            background-color: #e6e6fa;
+        }
+
+        .navbar {
+            background-color: #343a40;
+        }
+
+        .navbar-brand {
+            font-size: 1.5rem;
+        }
+
+        .card {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        .card-custom {
+            background-color: #f2f2f2;
+            border-color: #f2f2f2;
+        }
+
+        .file-name-left {
+            font-size: 1rem;
+            text-align: left;
+            margin-bottom: 0;
+        }
+
+        .timestamp-left {
+            font-size: 0.8rem;
+            color: #6c757d;
+            text-align: left;
+            margin-top: 0;
+        }
+
+        .view-pdf-remove-file {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .view-pdf-button {
+            margin-right: 10px;
+        }
+
+        .card-body {
+        position: relative;
+        }
+
+        .pdf-icon {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 50px;
+        height: 50px;
+        margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand" href="{{url_for('user_dashboard')}}">QGEN</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('user_dashboard')}}">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{url_for('upload')}}">Upload</a>
+                </li>
+            </ul>
+        </div>
+        <!-- Logout Button -->
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="{{url_for('logout')}}">Logout</a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1 class="mt-4 mb-4">My Question Papers</h1>
+        <div class="row">
+            {% for pdf_doc in pdf_documents %}
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="file-timestamp">
+                                <p class="file-name-left">{{ pdf_doc.file_name if pdf_doc.file_name else file_name }}</p>
+                                <p class="timestamp-left">{{ pdf_doc.timestamp }}</p>
+                            </div>
+                            <div class="view-pdf-remove-file">
+                                <a href="/view_pdf/{{ pdf_doc._id }}" class="btn btn-primary view-pdf-button">View PDF</a>
+                                <form action="/remove_pdf/{{ pdf_doc._id }}" method="post">
+                                    <button type="submit" class="btn btn-danger">Delete PDF</button>
+                                </form>
+                            </div>
+                            <img src="https://www.biochek.com/wp-content/uploads/2018/07/adobe-pdf-icon-logo-png-transparent.png" alt="PDF Icon" class="pdf-icon">
+                        </div>
+                    </div>
+                    
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    <footer class="page-footer font-small blue">
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+      <div class="footer-copyright text-center py-3">
+        <h6>Copyright@2023<br>QGEN|All Rights Reserved.</h6>
+      </div>
+      <!-- Copyright -->
+    
+    </footer>
+    <!-- Add Bootstrap JS (optional) -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+</body>
+</html>

@@ -36,7 +36,7 @@ def preprocess_text(text, segment_length=1700):
 checkpoint = "t5-base"
 tokenizer = T5TokenizerFast.from_pretrained(checkpoint)
 
-model = AutoModelForSeq2SeqLM.from_pretrained("ThomasSimonini/t5-end2end-question-generation")
+model = AutoModelForSeq2SeqLM.from_pretrained("rohan-jp1/t5-end2end-questions-generation")
 
 import random
 
@@ -192,9 +192,11 @@ def login():
 
         if existing_user:
             session['username'] = username
+            flash('Login successful!', 'success')
             return redirect('/userdashboard')
         else:
-            return "Invalid username or password!"
+            flash('Login Unsuccessful. Please check username and password', 'danger')
+            return redirect('/')
     else:
         return render_template('login.html')
 
@@ -202,6 +204,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.pop('username', None)
+    flash('Logged out successfully!', 'success')
     return redirect('/')
 
 @app.route("/userdashboard")
